@@ -315,8 +315,9 @@ router.route('/email').post(function(req, res){
       var paramId = req.body.id;
 
       // 발신자 정의.
-      var app_email = 'smj85548554@gmail.com';
-      var app_pass = 'wtwslloltccugeiy';
+      // 이메일과 비밀번호(인증코드)를 입력하세요
+      var app_email = '@gmail.com';
+      var app_pass = '';
 
       console.log('수신자 : ', paramId);
 
