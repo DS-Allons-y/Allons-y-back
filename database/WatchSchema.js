@@ -1,3 +1,5 @@
+const { Int32 } = require("bson");
+
 var Schema = {};
 
 Schema.createSchema = function (mongoose) {
@@ -14,7 +16,10 @@ Schema.createSchema = function (mongoose) {
         poster: { type: String, required: true },
         genres: { type: String, required: true },
         emotion: { type: String, required: true },
-        highlight: { type: String, required: true }
+        concentration: { type: String, required: true },
+        highlight: { type: String, required: true },
+        rating : { type: Number, required: true },
+        comment : { type: String, required: true },
     });
 
     console.log('Schema 정의를 완료하였습니다.');

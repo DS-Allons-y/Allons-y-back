@@ -10,6 +10,7 @@ Schema.createSchema = function (mongoose) {
     // 스키마 정의 (속성: type, required, unique)
     var UserSchema = mongoose.Schema({ // 사용자정보
         id: { type: String, required: true, unique: true, 'default': '' }, // 아이디
+        email: { type: String, required: true, unique: true, 'default': '' }, // 이메일
         password: { type: String, required: true }, 'default': '', // 비번
         name: { type: String, required: 'hashed', 'default': '' }, // 닉네임
         genres: { type: String, required: false }, // 선호 장르

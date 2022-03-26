@@ -1,10 +1,12 @@
 
+const { ConnectionPoolClosedEvent } = require('mongoose/node_modules/mongodb');
 var nodemailer = require('nodemailer');
 
 var signup = function(req, res) {
     console.log('/signup 라우팅 함수 호출됨.');
   
     var paramId = req.body.id || req.query.id;
+    var paramEmail = req.body.email || req.query.email
     var paramPassword = req.body.password || req.query.password;
     var paramName = req.body.name || req.query.name;
   
@@ -14,7 +16,7 @@ var signup = function(req, res) {
 
     // 데이터 베이스 객체가 초기화된 경우, signup 함수 호출하여 사용자 추가
     if(database) {
-      signUp(database, paramId, paramPassword, paramName, function(err, result) {
+      signUp(database, paramId, paramEmail, paramPassword, paramName, function(err, result) {
   
         if(err) {
             console.log('회원가입 에러 발생...');
@@ -43,12 +45,12 @@ var signup = function(req, res) {
     }
 };
 
-
 var login = function(req, res){
     console.log('/login 라우팅 함수 호출됨');
   
     var paramId = req.body.id || req.query.id;
     var paramPassword = req.body.password || req.query.password;
+
     console.log('요청 파라미터 : ' + paramId + ', ' + paramPassword);
     var database = req.app.get('database');
     if(database) {
@@ -89,7 +91,7 @@ var login = function(req, res){
       res.status(400).send();
       console.log("\n\n");
     }
-  };
+};
 
 var watchlist = function(req, res) {
     console.log('/watchlist(감상결과 목록 처리) 라우팅 함수 호출');
@@ -97,7 +99,7 @@ var watchlist = function(req, res) {
     var paramId = req.body.id || req.query.id; // 사용자 아이디 받아오기
     var database = req.app.get('database');
     if(database) {
-      WatchModel.findById(paramId, function(err, results) {
+      database.WatchModel.findById(paramId, function(err, results) {
           if (err) {
             callback(err, null);
             return;
@@ -127,6 +129,7 @@ var watchlist = function(req, res) {
         console.log("\n\n");
     }
 };
+
 var watchresult = function(req, res) {
     console.log('/watchresult(감상결과) 라우팅 함수 호출');
   
@@ -151,8 +154,11 @@ var watchresult = function(req, res) {
             title: results[0].title,
             poster: results[0].poster,
             genres: results[0].genres,
+            concentration: results[0].concentration,
             emotion: results[0].emotion,
-            highlight: results[0].highlight
+            highlight: results[0].highlight,
+            rating: results[0].rating,
+            comment: results[0].comment
           };
   
           res.status(200).send(JSON.stringify(objToSend));
@@ -175,7 +181,7 @@ var watchresult = function(req, res) {
       res.status(400).send();
       console.log("\n\n");
     }
-  };
+};
 
 var recommend1 = function(req, res){
     var database = req.app.get('database');
@@ -218,7 +224,7 @@ var recommend1 = function(req, res){
         console.log("\n\n");
     }
   
-  };
+};
 
 var recommend2 = function(req, res){
     console.log('/recommend2 (사용자 추천) 라우팅 함수 호출');
@@ -228,11 +234,11 @@ var recommend2 = function(req, res){
     if (database){
   
       //파이썬 코드 실행 (유사 사용자 추천)
-      const spawnSync = require('child_process').spawnSync; // child-process 모듈의 spawn 획득
+      const spawnSync= require('child_process').spawnSync; // child-process 모듈의 spawn 획득
       var getpython = ''
   
       //result에는 유저에게 추천할 사용자들 id 가 들어있음.
-      const result = spawnSync('python', ['recommend/main.py'], {input : paramId});
+      const result = spawnSync('python', ['recommend/main.py', paramId]);
       console.log('중간점검')
   
       if(result.status !== 0){
@@ -245,7 +251,9 @@ var recommend2 = function(req, res){
         getpython = result.stdout.toString();
         console.log('python 결과 형식 : ', typeof(getpython))
       }
-  
+      
+      var resultArray = new Array(25);
+
       getRecommendUserList(database, getpython, function(err, result){
   
         console.dir(result);
@@ -258,36 +266,103 @@ var recommend2 = function(req, res){
   
         else if(result.length > 0){
           console.log('추천 사용자 목록 가져오기 성공');
-          console.log(result);
+          
+          
+          var userIds = new Array(25);
+
+          // 추천받아올 사용자 수 5
+          for (var i = 0; i<userIds.length; i++){
+            if (i<5){ userIds[i] = result[0]}
+            else if (i>4 && i<10){ userIds[i] = result[1]}
+            else if (i>9 && i<15){ userIds[i] = result[2]}
+            else if (i>14 && i<20){ userIds[i] = result[3]}
+            else if (i>19 && i<25){ userIds[i] = result[4]}
+          }
+          console.log('userids: ', userIds)
+
+          const forloop = async _ => {
+
+            for (let i = 5; i<result.length; i++){
+
+              await database.WatchModel.findByMovieId(result[i], function(err, results) {
+                if (err) {
+                  console.dir(err)
+                  console.log(result[i])
+                  console.log('영화찾지 못함')
   
-          // 전달 : 추천 사용자들 목록 find id 통해서 포스터, 영화제목
-          res.status(200).send(JSON.stringify(result));
-          console.log('추천 사용자 목록 전송 성공');
-          console.log('\n\n');
-        }
+                  var objToSend = {
+                    userId: 'NON',
+                    title: 'NON',
+                    poster: 'NON'
+                  };
+                console.dir(objToSend)
+                resultnumm = i-5
+                resultArray[resultnumm]=objToSend;
+                }
+        
+                if(results.length>0) {
+                  console.log('영화 정보 존재');
+                  console.log(result[i] +'의 영화정보 가져오기');
+                  console.log(results);
+                  
+                  var objToSend = {
+                      userId: userIds[0],
+                      title: results[0].title,
+                      poster: results[0].poster
+                  };
+                  console.dir(objToSend)
+                  resultnumm = i-5
+                  resultArray[resultnumm]=objToSend;
+                }
   
+                else {
+                  console.log('머임 암튼 영화 못찾음 : ', result[i]);
+                  var objToSend = {
+                    userId: 'NON',
+                    title: 'NON',
+                    poster: 'NON'
+                };
+                console.dir(objToSend)
+                resultnumm = i-5
+                resultArray[resultnumm]=objToSend;
+                }
+              }).clone();
+
+              console.log("\n결과1 : ")
+              console.dir(resultArray)
+  
+            }
+
+          }
+          forloop()
+        }  
         else {
           res.status(400).send()
           console.log('추천 사용자 목록 없음.');
           console.log('\n\n');
         }
-  
       });
-  
+      
+      console.log("\n결과2 : ")
+      console.dir(resultArray)
+      res.status(200).send(JSON.stringify(resultArray)); // 추천영화 목록 보내기 
+
     } else {
       console.log("데이터베이스가 정의되지 않음...");
       res.status(400).send
     }
-  };
-var enterroom = function(req, res){
+};
 
-    console.log('/enterRoom ( 방 코드 입력 / 입장 ) 라우팅 함수 호출');
+var enterroom = function(req, res){
+    console.log('/enterroom ( 방 코드 입력 / 입장 ) 라우팅 함수 호출');
+    
+    var paramRoomCode = req.body.roomCode || req.query.roomCode;
+
+    console.log('입력된 룸 코드 : ' + paramRoomCode);
+
     var database = req.app.get('database');
+
     if(database){
-  
-      var paramRoomCode = req.body.roomCode || req.query.roomCode;
-  
-      console.log('입력된 룸 코드 : ' + paramRoomCode);
   
       enterRoom(database, paramRoomCode, function(err, result){
   
@@ -299,9 +374,7 @@ var enterroom = function(req, res){
   
         else if (result.length > 0){
           console.log('초대 코드에 해당하는 함께보기 방 검색 성공');
-  
-  
-          // 방 생성한 유저 아이디를 스키마에 넣어서 전달해주는 것도 좋을듯
+
           res.status(200).send();
           console.log('같이 보기 방 : 초대 코드 검색 완료 : 정상코드 발송 완료');
           console.log('\n\n');
@@ -323,16 +396,144 @@ var enterroom = function(req, res){
   
 };
 
+var watchAloneStart = function(req, res){
+
+  var paramId = req.body.id || req.query.id; // 사용자 아이디 받아오기
+  var parammovieId = req.body.movieId || req.query.movieId; // 감상중인 영화 아이디 받아오기
+
+  // eyetracking
+  if (database){
+
+    var newEyetrack = new db.EyetrackModel({'userId' : paramId, 'movieId' : parammovieId, 
+                    'passwoconcentration_sumrd': 0, 'num' : 0});
+
+    // save()로 저장
+    newEyetrack.save(function(err) {
+        if(err) {
+          callback(err, null);
+          return;
+        }
+        console.log('아이트래킹 스키마 생성');
+        callback(null, user);
+      });
+
+  } else {
+    console.log("데이터베이스가 정의되지 않음...");
+    res.status(400).send
+  }
+
+
+}
+
+var watchImageCapture = function(req, res){
+
+  var paramId = req.body.id || req.query.id; // 사용자 아이디 받아오기
+  var parammovieId = req.body.movieId || req.query.movieId; // 감상중인 영화 아이디 받아오기
+
+  if (database){
+  
+    //파이썬 코드 실행 (유사 사용자 추천)
+    const spawnSync= require('child_process').spawnSync; // child-process 모듈의 spawn 획득
+    var getpython = ''
+
+    //result에는 유저에게 추천할 사용자들 id 가 들어있음.
+    const result = spawnSync('python', ['eyetracking/eyetrack.py']);
+    console.log('중간점검')
+
+    if(result.status !== 0){
+      process.stderr.write(result.stderr)
+
+      process.exit(result.status);
+    } else{
+      process.stdout.write(result.stdout);
+      process.stderr.write(result.stderr);
+      getpython = result.stdout.toString();
+      console.log('python 결과 형식 : ', typeof(getpython))
+    }
+
+    db.EyetrackModel.findByUserMovieId(paramId, parammovieId, function(err, results){
+
+      if (err) {
+        console.log('해당하는 사용자의 아이트래킹 기록이 없습니다.');
+        console.dir(err);
+        return;
+      }
+  
+      if(results.length > 0) {
+  
+        console.log('사용자의 아이트래킹 기록 찾음');
+
+        sum = results.concentration_sum + Number(getpython)
+        count = results.num + 1
+
+        db.EyetrackSchema.update({userId : paramId , movieId : parammovieId} 
+          , {$set : { concentration_sum : sum, num : count }})
+      }
+
+      else {
+        console.log('해당하는 사용자의 아이트래킹 기록이 없습니다.');
+        console.dir(err);
+        return;
+      }
+    })
+
+  } else {
+    console.log("데이터베이스가 정의되지 않음...");
+    res.status(400).send
+  }
+
+
+}
+
+var watchAloneEnd = function(req, res){
+
+  var paramId = req.body.id || req.query.id; // 사용자 아이디 받아오기
+  var parammovieId = req.body.movieId || req.query.movieId; // 감상중인 영화 아이디 받아오기
+
+  var concentration
+
+  // 집중도 평균 
+  db.EyetrackModel.findByUserMovieId(paramId, parammovieId, function(err, results){
+
+    if (err) {
+      console.log('해당하는 사용자의 아이트래킹 기록이 없습니다.');
+      console.dir(err);
+      return;
+    }
+
+    if(results.length > 0) {
+
+      console.log('사용자의 아이트래킹 기록 찾음');
+
+      sum = results.concentration_sum 
+      count = results.num 
+
+      concentration = sum / count
+
+      // 수정필요
+      db.WatchSchema.update({} 
+        , {$set : { concentration : concentration }})
+    }
+
+    else {
+      console.log('해당하는 사용자의 아이트래킹 기록이 없습니다.');
+      console.dir(err);
+      return;
+    }
+  })
+};
+
 var email = function(req, res){
     console.log('/email(이메일 인증) 라우팅 함수 호출');
     var database = req.app.get('database');
     if(database){
   
-        var paramId = req.body.id;
+        // var paramId = req.body.id;
+        var paramId = req.body.email;
   
         // 발신자 정의.
-        var app_email = '***@gmail.com';
-        var app_pass = '****';
+        var app_email = 'smj85548554@gmail.com';
+        var app_pass = 'wtwslloltccugeiy';
 
   
         console.log('수신자 : ', paramId);
@@ -357,7 +558,7 @@ var email = function(req, res){
         res.status(400).send();
         console.log("\n\n");
     }
-  };
+};
 
 var makeRoom = function(req, res) {
     console.log('/makeRoom 라우팅 함수 호출됨');
@@ -431,9 +632,7 @@ var logout = function (req, res) {
     catch (e) {
       console.log(e)
     }
-  };
-
-  
+};
 
 var getWatchResult = function(db, userid, movieid, callback){
   console.log('getWatchResult(감상결과 가져오기) 호출됨. userid : ' + userid + ', movieid : ' + movieid);
@@ -471,8 +670,6 @@ var getWatchResult = function(db, userid, movieid, callback){
         }
       });
 }
-
-
 
 var authUser = function(db, id, password, callback) {
   console.log('authUser(로그인) 호출됨' + id + ', ' + password);
@@ -516,7 +713,7 @@ var authUser = function(db, id, password, callback) {
 };
 
 // 사용자를 추가하는 함수
-var signUp = function(db, id, password, name, callback) { // callback 함수는 함수를 호출하는 쪽에 결과 객체를 보내기 위해 쓰임
+var signUp = function(db, id, email, password, name, callback) { // callback 함수는 함수를 호출하는 쪽에 결과 객체를 보내기 위해 쓰임
   console.log('signUp 호출됨' + id + ', ' + password + ', ' + name);
 
   // 아이디를 사용해 검색
@@ -536,7 +733,7 @@ var signUp = function(db, id, password, name, callback) { // callback 함수는 
     }
     else {
 
-      var user = new db.UserModel({'id' : id, 'password': password, 'name' : name});
+      var user = new db.UserModel({'id' : id, 'email' : email, 'password': password, 'name' : name});
 
       // save()로 저장
       user.save(function(err) {
@@ -554,10 +751,11 @@ var signUp = function(db, id, password, name, callback) { // callback 함수는 
 var enterRoom = function(db, roomcode, callback){
   console.log('enterRoom (같이보기 방 입장)호출됨. 방 코드 : ' + roomcode);
 
-  db.roomModel.findByRoomCode(roomcode, function(err, result){
+  db.RoomModel.findByRoomCode(roomcode, function(err, result){
 
     if(err){
-      callback(err, null);
+      console.log('함께보기 방 입장 중 에러 발생');
+      console.dir(err);
       return;
     }
 
@@ -579,11 +777,15 @@ var getRecommendUserList = function(database, result, callback){
 
   console.log('getRecommendUserList 호출됨.');
 
-  substrResult = result.substring(2)
-  splitResult = substrResult.split(' ')
-  console.log(splitResult)
+  removedResult = result.replace(/array/g, '')
+  removedResult = removedResult.replace(/\[/g, '')
+  removedResult = removedResult.replace(/\]/g, '')
+  removedResult = removedResult.replace(/\(/g, '')
+  removedResult = removedResult.replace(/\)/g, '')
+  removedResult = removedResult.replace(/\,/g, '')
 
-  console.log('result 개수 ; ', splitResult.length);
+  //substrResult = result.substring(2)
+  splitResult = removedResult.split(' ')
 
   splitResult2 = [];
   var resultArray = [];
@@ -603,36 +805,8 @@ var getRecommendUserList = function(database, result, callback){
 
   var count = splitResult2.length
   console.log('===================\n결과 갯수 : ', count)
-  splitResult2.forEach(element => {
-    database.WatchModel.findByMovieId(element, function(err, result){
-      console.log('무비아이디로 찾는 중')
 
-      if(err){
-        console.log('추천 사용자 못찾음')
-        callback(err, null)
-      }
-
-      if(result.length > 0){
-        console.log('추천 사용자 찾음')
-        resultArray.push({
-          id : result[0].userId,
-          title : result[0].title,
-          poster : result[0].poster
-        })
-        console.log(resultArray)
-      }
-
-      else {
-        console.log('추천 사용자 못찾음')
-        callback(null, null);
-      }
-
-      if(resultArray.length == count){
-        console.log('추천 사용자 | 추천 목록 생성 완료')
-        callback(null, resultArray);
-      }
-    })
-  })
+  callback(null, splitResult2)
 };
 
 var sendEmail = function (sendemail, sendpass, userid, callback) {
@@ -694,3 +868,6 @@ module.exports.enterroom = enterroom;
 module.exports.email = email;
 module.exports.makeRoom = makeRoom;
 module.exports.logout = logout;
+module.exports.watchAloneStart = watchAloneStart;
+module.exports.watchImageCapture = watchImageCapture;
+module.exports.watchAloneEnd = watchAloneEnd;

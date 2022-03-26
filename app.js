@@ -82,7 +82,7 @@ router.route('/recommend1').post(user.recommend1);
 router.route('/recommend2').post(user.recommend2);
 
 // 초대 코드 입장
-router.route('/enterRoom').post(user.enterroom);
+router.route('/enterroom').post(user.enterroom);
 
 router.route('/email').post(user.email);
 
@@ -91,6 +91,15 @@ router.route('/makeRoom').post(user.makeRoom);
 
 // 로그아웃 
 router.route('/logout').post(user.logout);
+
+// 감상 시작 시 신호
+router.route('/watchAloneStart').post(user.watchAloneStart);
+
+// s3버킷으로 사진보낼 때마다
+router.route('/watchImageCapture').post(user.watchImageCapture);
+
+// 감상 종료 시 신호
+router.route('/watchAloneEnd').post(user.watchAloneEnd);
 
 app.use('/', router);
 
