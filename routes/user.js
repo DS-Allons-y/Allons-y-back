@@ -353,6 +353,7 @@ var sceneAnalyze = function(req, res) {
     var paramId = req.body.id || req.query.id; // 사용자 아이디 받아오기
     var parammovieTitle = req.body.movieTitle || req.query.movieTitle; // 감상중인 영화 제목 받아오기
     var movieFileName = parammovieTitle+".mp4"
+    var today = new Date();
 
     function sceneAnalyze() {
         console.log('sceneAnalyze 함수 호출');
@@ -451,7 +452,8 @@ var sceneAnalyze = function(req, res) {
                                 if (paramGenre && paramActor && paramEmotion && paramCorrect){
                                    dbSet(paramGenre, paramActor, paramEmotion, paramCorrect)
                                    console.log("---값 확인----")
-                                   console.log(paramGenre, paramActor, paramEmotion, paramCorrect)
+                                   //console.log(paramGenre, paramActor, paramEmotion, paramCorrect)
+                                   ratingUpdate()
                                 }
                             }
                         });
@@ -460,6 +462,56 @@ var sceneAnalyze = function(req, res) {
                }
         })
         });
+        // user_info.csv 업데이트 - 평점 가공 (감정부합도+집중도+평점)
+        function ratingUpdate(){
+          // database.WatchModel.find({ userId : paramId, title : "Toy Story" }, function(err, results) {
+          database.WatchModel.find({ userId : paramId, title : parammovieTitle}, function(err, results) { // WatchModel에서 감상 결과 정보 가져오기
+            if (err) {
+              callback(err, null);
+              return;
+            }
+
+            if(results.length>0) {
+              const existing = results[0]
+              console.log(results[0]);
+              console.log(results[0].rating);
+              const spawn = require('child_process').spawn;
+              console.log("WatchModel 감상결과 results : " + results) // WatchModel에서 감상 결과 정보 확인
+
+              database.UserModel.findById(paramId, function (err, result2) { // UserModel에서 추천 아이디 가져옴
+                    if (err) {
+                      return;
+                    }
+
+                    if (result2.length > 0) {
+                      var recoID = String(result2[0].reco2_id)
+                      console.log("recoID: "+typeof(recoID))
+                      const rating1 = parseFloat(results[0].rating)
+                      const resultEmotionPer1 = parseInt(results[0].resultEmotionPer)
+                      const concentration1 = parseInt(results[0].concentration)
+
+                      // 2. spawn을 통해 "python 파이썬파일.py" 명령어 실행
+                      const result = spawn('python', ['recommend/editRatingUpdate.py', recoID,rating1,resultEmotionPer1,concentration1,parammovieTitle]);
+
+                      result.stdout.on('data', function(data){
+                          const stringResult = data.toString();
+                          console.log("타입 결과 : ")
+                          console.log(stringResult)
+                      })
+
+                      return;
+                    }
+                }
+              )
+
+            }
+            else {
+              console.log("DB에서 해당 영화를 찾지 못했습니다.");
+              return;
+            }
+          });
+
+      }
     }
 
     sceneAnalyze()
@@ -1246,7 +1298,7 @@ var watchTogetherImageCapture = async function(req, res){
 };
 
 // 감상 끝 - 혼자보기 - 테스트 데이터
-// 맥스 감정 추출, 하이라이트 장면 처리(보안 위한 사진 삭제), 집중도, 정규화,
+// 맥스 감정 추출, 하이라이트 장면 처리(보안 위한 사진 삭제), 집중도, 정규화
 var watchAloneEnd = async function(req, res){
   console.log('/watchAlonEnd 라우팅 함수 호출');
   var database = req.app.get('database');
@@ -1469,47 +1521,6 @@ var watchAloneEnd = async function(req, res){
 
       }
 
-    // user_info.csv 업데이트 - 평점 가공 (감정부합도+집중도+평점)
-      async function ratingUpdate(){
-          // database.WatchModel.find({ userId : paramId, title : "Toy Story" }, function(err, results) {
-          database.WatchModel.find({ userId : paramId, title : parammovieTitle, date :today.toLocaleDateString('en-US') }, function(err, results) {
-            if (err) {
-              callback(err, null);
-              return;
-            }
-
-            if(results.length>0) {
-              const existing = results[0]
-              console.log(results[0]);
-              console.log(results[0].rating);
-              const spawn = require('child_process').spawn;
-
-              database.UserModel.findById(paramId, function (err, result2) {
-                    if (err) {
-                      return;
-                    }
-
-                    if (result2.length > 0) {
-                      var recoID = result2[0].reco2_id
-                      console.log("recoID: "+recoID)
-                      // 2. spawn을 통해 "python 파이썬파일.py" 명령어 실행
-                      const result = spawn('python', ['recommend/editRatingUpdate.py', recoID, results[0].rating, results[0].resultEmotionPer, results[0].concentration, "Toy Story"]);
-                      result.stdout.on('data', function(ls_result){
-                          console.log(ls_result.toString());
-                      })
-                      return;
-                    }
-                }
-              )
-
-            }
-            else {
-              console.log("DB에서 해당 영화를 찾지 못했습니다.");
-              return;
-            }
-          });
-
-      }
       async function main() {
         await emotionCorrectTest()
 

@@ -1,5 +1,5 @@
-# 사용자의 아이디(csv파일 내에 기록되는 유저 아이디) 알아오기
 # -*- coding: utf-8 -*-
+# 사용자의 아이디(csv파일 내에 기록되는 유저 아이디) 알아오기
 import pandas as pd
 import sys
 from csv import DictWriter

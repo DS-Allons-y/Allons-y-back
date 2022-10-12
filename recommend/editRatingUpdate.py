@@ -6,6 +6,7 @@ from csv import DictWriter
 
 def process(userId, rating, resultEmotionPer, concentration, parammovieTitle):
     df = pd.read_csv('csv/movie_info.csv', low_memory=False)
+
     for i in range(len(df)):
         if df['original_title'][i] == parammovieTitle:
             movieID = str(df['id'][i])
@@ -21,5 +22,6 @@ def process(userId, rating, resultEmotionPer, concentration, parammovieTitle):
         writer_object.writerow(result_row)
         f_object.close()
 
+
 #process("621",5.0,80,90,"Toy Story")
-process(str(sys.argv[1]), sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
+process(str(sys.argv[1]), int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4]),str(sys.argv[5]))

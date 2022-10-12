@@ -24,6 +24,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/csv/movie_info_2_2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/csv/poster_path.csv">
           <value>
             <Attribute>
@@ -32,6 +39,20 @@
           </value>
         </entry>
         <entry key="/csv/poster_path_2.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/csv/ratings_small.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/csv/user_info.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

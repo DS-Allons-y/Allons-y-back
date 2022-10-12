@@ -180,7 +180,7 @@ class VideoDetect:
 
 def main(second,movieFileName):
     roleArn = 'arn:aws:iam::392553513869:role/serviceRekognition'
-    bucket = 'allonsybucket1'
+    bucket = 'allonsyvideotestbucket'
     video = movieFileName
 
     analyzer = VideoDetect(roleArn, bucket, video)
