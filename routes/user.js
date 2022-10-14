@@ -1565,7 +1565,7 @@ var watchAloneEnd = async function(req, res){
           movieTitle : parammovieTitle
         });
 
-        await ratingUpdate();
+        // await ratingUpdate();
 
         var objToSend = {
           genres : movie_genre,
