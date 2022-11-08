@@ -355,7 +355,7 @@ var sceneAnalyze = function(req, res) {
     var movieFileName = parammovieTitle+".mp4"
     var today = new Date();
 
-    function sceneAnalyze() {
+    async function sceneAnalyze() {
         console.log('sceneAnalyze 함수 호출');
         var paramGenre = null
         var paramActor = null
@@ -430,7 +430,8 @@ var sceneAnalyze = function(req, res) {
         // 함수 비동기
         console.log(movieFileName)
 
-        database.WatchModel.findByUserMovieTitle(paramId,parammovieTitle, function(err, results) {
+        async function scene1(){
+            await database.WatchModel.findByUserMovieTitle(paramId,parammovieTitle, function(err, results) {
             //console.log("second : "+results[0].highlight_time.toString())
             second = results[0].highlight_time.toString()
 
@@ -450,10 +451,15 @@ var sceneAnalyze = function(req, res) {
                                 paramCorrect = a[1]
                                 console.log(paramEmotion)
                                 if (paramGenre && paramActor && paramEmotion && paramCorrect){
+                                   // dbSet("Drama", "Tom Holland", "SAD ANGRY SURPRISED", "SAD SAD FEAR HAPPY ANGRY CONFUSED SAD ANGRY CONFUSED ANGRY CALM HAPPY SAD ANGRY CALM SAD CALM CALM CALM CALM CALM")
                                    dbSet(paramGenre, paramActor, paramEmotion, paramCorrect)
                                    console.log("---값 확인----")
-                                   //console.log(paramGenre, paramActor, paramEmotion, paramCorrect)
-                                   ratingUpdate()
+                                   console.log(paramGenre, paramActor, paramEmotion, paramCorrect)
+                                   async function func2(){
+                                    await emotionCorrectTest()
+                                    await ratingUpdate()
+                                   }
+                                   func2()
                                 }
                             }
                         });
@@ -461,11 +467,16 @@ var sceneAnalyze = function(req, res) {
                   });
                }
         })
-        });
+        }).clone()
+        }
+        await scene1()
+
         // user_info.csv 업데이트 - 평점 가공 (감정부합도+집중도+평점)
-        function ratingUpdate(){
+        async function ratingUpdate(){
           // database.WatchModel.find({ userId : paramId, title : "Toy Story" }, function(err, results) {
-          database.WatchModel.find({ userId : paramId, title : parammovieTitle}, function(err, results) { // WatchModel에서 감상 결과 정보 가져오기
+          async function rating1(){
+            console.log("test......")
+            await database.WatchModel.find({ userId : paramId, title : parammovieTitle}, function(err, results) { // WatchModel에서 감상 결과 정보 가져오기
             if (err) {
               callback(err, null);
               return;
@@ -509,9 +520,71 @@ var sceneAnalyze = function(req, res) {
               console.log("DB에서 해당 영화를 찾지 못했습니다.");
               return;
             }
-          });
-
+          }).clone()
+          }
+          await rating1()
       }
+
+        // 감정 부합 확인
+        async function emotionCorrectTest() {
+            function updateResultPer(resultSend) {
+                 console.log("결과값 확인(0~100) : "+resultSend);
+                 database.likeModel.updateOne( // likeModel의 부합도 확인
+                    { id: paramId },
+                    { $set: { resultEmotionPer : resultSend },}
+                );
+            }
+            var resultSend = 0;
+            async function db1(){
+                await database.likeModel.findById(paramId, function (err, result1) { // likeModel에서 영화 감정부합도 정보 가져오기
+                    if (err) {
+                      callback(err, null);
+                      return;
+                    }
+
+                    if (result1.length > 0) {
+                        //console.log(result1[0].correctModel);
+                        array_test = result1[0].correctModel.split(' '); // array_test에 감정부합도 저장
+                        array_test.pop();
+                        console.log("감정부합도 배열 완성 확인 (length) : " + array_test.length);
+                        console.log("10.24 log test")
+                    }
+                }).clone()
+            }
+            await db1()
+
+            async function db2(){
+                // await database.WatchModel.findByUserMovieTitleDate(paramId, parammovieTitle,"9/29/2022", function (err, result2) { // WatchModel에서 사용자 감상결과 감정부합도 가져오기
+                await database.WatchModel.findByUserMovieTitleDate(paramId, parammovieTitle, today.toLocaleDateString('en-US'), function (err, result2) { // WatchModel에서 사용자 감상결과 감정부합도 가져오기
+                        if (err) {
+                          callback(err, null);
+                          return;
+                        }
+                        if (result2.length > 0) {
+                          // console.log("10.24 log test2")
+                          var emotionArray = result2[0].every_emotion_array;
+                          console.log(emotionArray)
+                          console.log(array_test)
+                          var len_test = result2[0].every_emotion_array.length;
+                          var count_test = 0;
+                          var allCount = 0;
+                          for (i = 0; i < len_test; i++) { // 영화 감정과 사용자 감정 비교, 부합도 확인
+                            if (array_test[i] == emotionArray[i]) {
+                              count_test += 1;
+                            }
+                            allCount+=1;
+                          }
+                          console.log("횟수 : " + count_test + " 전체 횟수 : "+allCount);
+                          resultSend = ((count_test/allCount)*100).toFixed(3)
+
+                          console.log("결과값 확인(0~100) : "+resultSend);
+                          updateResultPer(resultSend)
+                        }
+                  }).clone()
+            }
+            await db2()
+       }
+
     }
 
     sceneAnalyze()
@@ -1466,64 +1539,8 @@ var watchAloneEnd = async function(req, res){
         }
       }
 
-      // 감정 부합 확인
-      async function emotionCorrectTest() {
-        var resultSend=0;
-        await database.likeModel.findById(paramId, function (err, result1) {
-            if (err) {
-              callback(err, null);
-              return;
-            }
-
-            if (result1.length > 0) {
-              console.log(result1[0].correctModel);
-              array_test = result1[0].correctModel.split(",");
-              array_test.pop();
-              console.log(array_test.length);
-            }
-          })
-          .clone();
-
-        async function updateResultPer(resultSend) {
-            await console.log("결과값 확인(0~100) : "+resultSend);
-            await database.likeModel.updateOne(
-                { id: paramId },
-                { $set: { resultEmotionPer : resultSend },}
-            );
-        }
-
-        await database.WatchModel.findByUserMovieTitleDate(paramId, parammovieTitle, today.toLocaleDateString('en-US'), function (err, result2) {
-            if (err) {
-              callback(err, null);
-              return;
-            }
-
-            if (result2.length > 0) {
-              var emotionArray = result2[0].every_emotion_array;
-              // console.log(emotionArray)
-              var len_test = result2[0].every_emotion_array.length;
-              var count_test = 0;
-              var allCount = 0;
-              for (i = 0; i < len_test; i++) {
-                if (array_test[i] == emotionArray[i]) {
-                  count_test += 1;
-                }
-                allCount+=1;
-              }
-              console.log("횟수 : " + count_test + " 전체 횟수 : "+allCount);
-              resultSend = ((count_test/allCount)*100).toFixed(3)
-
-              console.log("결과값 확인(0~100) : "+resultSend);
-              updateResultPer(resultSend);
-            }
-          }
-        ).clone();
-
-      }
 
       async function main() {
-        await emotionCorrectTest()
-
         ////////////////////////// 하이라이트 정규화 //////////////////////////
         await getWatchResult(paramId, parammovieTitle);
         /////////////////////////////////////////////////////////////////
@@ -1564,8 +1581,6 @@ var watchAloneEnd = async function(req, res){
           userId : paramId,
           movieTitle : parammovieTitle
         });
-
-        // await ratingUpdate();
 
         var objToSend = {
           genres : movie_genre,
