@@ -1750,8 +1750,8 @@ var makeRoom = async function (req, res) {
   var RoomCode;
 
   async function makeRTCToken() {
-    //RoomCode = Math.random().toString(36).substr(2,11); // 랜덤으로 방 초대코드 생성
-    RoomCode = 'test'
+    RoomCode = Math.random().toString(36).substr(2,11); // 랜덤으로 방 초대코드 생성
+    //RoomCode = 'test'
 
     const RtcTokenBuilder = require("../rtcToken/RtcTokenBuilder2").RtcTokenBuilder;
     const RtcRole = require("../rtcToken/RtcTokenBuilder2").Role;
