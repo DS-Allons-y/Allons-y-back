@@ -48,10 +48,6 @@ Link : [[2022 한이음 공모전] 하루뭅(Harumov) - 감정분석 기반 영�
 - 2022 한이음 ICT 멘토링 (입선)
 
 
-<br>
-
-
-<br>
 ## 개발 보고서
 link : https://drive.google.com/file/d/1AwSsR56NB4DB2u6Zcg_txL72G6XMc2Fl/view?usp=sharing
 
