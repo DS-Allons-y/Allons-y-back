@@ -37,7 +37,7 @@ Link : [[2022 한이음 공모전] 하루뭅(Harumov) - 감정분석 기반 영�
 - MongoDB
 - AWS (EC2, Rekognition, SQS/SNS, S3)
 <img width="786" alt="스크린샷 2022-09-27 오후 5 49 46" src="https://user-images.githubusercontent.com/62551459/192479787-27ee8f0c-8182-4392-a900-8150d3362779.png">
-<img width="1226" alt="스크린샷 2023-03-12 오후 2 03 32" src="https://user-images.githubusercontent.com/62551459/224525434-f7189518-df3f-4d0b-9eb8-d2bd0b61e612.png">
+<img width="626" alt="스크린샷 2023-03-12 오후 2 03 32" src="https://user-images.githubusercontent.com/62551459/224525434-f7189518-df3f-4d0b-9eb8-d2bd0b61e612.png">
 
 ## 🏆 수상 내역
 
